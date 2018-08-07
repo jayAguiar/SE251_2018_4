@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Untitled Document</title>
+<script type="text/javascript" src="scripts/player_data.js"></script>
+<script type="text/javascript" src="scripts/crate_data.js"></script>
+<script type="text/javascript" src="scripts/keyboard_controls.js"></script>
+<script type="text/javascript" src="scripts/Sound.js"></script>
+<script type="text/javascript" src="scripts/Sprite.js"></script>
+<script type="text/javascript" src="scripts/Player.js"></script>
+<script type="text/javascript" src="scripts/World.js"></script>
+<script type="text/javascript" src="scripts/ItemsClass.js"></script>
+<script type="text/javascript" src="scripts/Items.js"></script>
+<style>
+canvas{position:absolute; top:0; left:0;background-color:none;background-repeat:no-repeat;}
+</style>
+</head>
+
+<body>
+</body>
+<script>
+
+var viewPort = {width:800, height:400};
+var pickupSound = new Sound("sounds/RewardSo-Mark_E_B-8078_hifi.mp3");
+var level = new World(viewPort, 1, "images/bg.png", "images/bghit.png", ["images/bgwalls.png","images/bg.png"]);
+var player = new Player(viewPort, 2, "images/sprites.png", 5, level);
+player.canJump = true;
+var points = [];
+      
+var itemsMap = new Image();
+itemsMap.src = 'images/items.png';
+
+itemsMap.onload = function() 
+{
+	itemsObject = drawItems(viewPort, 3, level, this, "images/crate.png");
+	animate();
+}
+		
+
+function animate()
+{
+//calculate velocities
+
+ if(d)player.accelerateX(player.spd).spriteDirection = 2;
+ 
+ if(a)player.accelerateX(-player.spd).spriteDirection = 1;
+ 
+ if(w && player.canJump)player.accelerateY(-player.spd).spriteDirection = 3;	//player.jump(35).spriteDirection = 3;
+
+ if(s)player.accelerateY(player.spd).spriteDirection = 0;
+ 
+  //Move Player
+  player.x += player.applyFrictionX(.5).regulateVX().getVX();
+  player.y += player.applyFrictionY(.5).regulateVY().getVY();
+  
+  
+  //Check Collision
+  level.renderHitMap();
+  
+	while(player.left().obstructed)player.stopX(1);
+ 
+	while(player.right().obstructed)player.stopX(-1);
+ 	
+	while(player.top().obstructed)player.stopY(1);
+ 	
+ 	while(player.bottom().obstructed)player.stopY(-1);
+	
+ //Move Level	
+	player.cameraFollow();
+		
+	for(var i =0; i < itemsObject.items.length; i++)
+	{
+		if(player.hitTestObject(itemsObject.items[i])){itemsObject.items[i].x = 10000;pickupSound.play();} 
+	}
+  //Update Graphics
+  	updateScreen();
+	player.drawpoints();
+	
+	var timer = setTimeout(animate, 33);
+}
+
+function updateScreen()
+{
+	
+	level.ctx.clearRect(0,0,level.c.width, level.c.height);
+	player.ctx.clearRect(0,0,player.c.width, player.c.height);
+	itemsObject.ctx.clearRect(0,0,itemsObject.c.width, itemsObject.c.height);
+	//draw level
+	level.draw();
+	// move the background
+	level.c.style.backgroundPosition = level.getBackgroundPosition();
+		//draw player
+		
+		if(!a && !w && !s && !d) 
+		{
+			//draw idle frame
+			player.drawSprite(3);
+		}
+		else 
+		{
+			//animate sprite
+			player.drawSprite();
+		}	
+	
+	//draw the itemsObject
+	for(var i =0; i< itemsObject.items.length; i++)
+	{
+		itemsObject.items[i].drawSprite(0);
+	}
+
+}
+
+</script>
+</html>

@@ -1,0 +1,402 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Untitled Document</title>
+<script type="text/javascript" src="player.js"></script>
+<style>
+img{display:none;}
+#canvas1{position:absolute; top:0; left:0; z-index:1; background-color:none; background-image:url("bg2.png"), url("bg2.png");}
+#canvas2{position:absolute; top:0; left:0; z-index:2;background-color:none;}
+#canvas3{position:absolute; top:0; left:0; z-index:3;background-color:none;}
+</style>
+</head>
+
+<body>
+<canvas id="canvas1" width="800" height="400"></canvas>
+<canvas id="canvas2" width="800" height="400"></canvas>
+<canvas id="canvas3" width="800" height="400"></canvas>
+<div>
+<img id="level" src='bg.png'>
+<img id="player" src='sprites.png'>
+</div>
+</body>
+<script>
+
+
+
+
+
+var c=document.getElementById("canvas1");
+var ctx=c.getContext("2d");
+var c2=document.getElementById("canvas2");
+var ctx2=c2.getContext("2d");
+var c3=document.getElementById("canvas3");
+var ctx3=c3.getContext("2d");
+
+function World(location, source1, source2){
+  this.x = 0;
+  this.y = 0;
+  this.gravity = 1;
+  this.scaleX = 1;
+  this.scaleY = 1;
+  this.image = new Sprite(null, this, source1);
+  this.image.crossOrigin="anonymous";
+  this.hit = new Sprite(null, this, source2);
+  this.hit.crossOrigin="anonymous";
+ 
+  this.draw = function()
+  	{
+    location.drawImage(this.image.image,this.x,this.y);
+  	}
+  this.drawhit = function()
+  	{
+    location.drawImage(this.hit.image,this.x,this.y);
+  	}
+}
+
+function invert()
+{
+
+ var imageData = ctx3.getImageData(0,0, c3.width, c3.height);
+ var data = imageData.data;
+    
+  
+    for (var i = 0; i < data.length; i += 4) {
+      data[i]     = 255 - data[i];     // red
+      data[i + 1] = 255 - data[i + 1]; // green
+      data[i + 2] = 255 - data[i + 2]; // blue
+    }
+    //ctx.putImageData(imageData, 0, 0);
+	console.log(imageData);
+
+}
+
+var level = new World(ctx,"bg.png", "bghit.png");
+var player = new Player(ctx2, "sprites.png", 5);
+var brick = new Player(ctx3, "sprites.png", 0, level);
+brick.x = 0;
+brick.y = 0;
+invert();
+//level2 = new Level(ctx2,"bg.png");
+	
+
+function Sprite(json, parent, source)
+{
+					var s = 
+					{
+							data:json,
+							image:new Image(),
+							height:function(){return parent.scaleY * this.image.height},
+							width:function(){return parent.scaleX * this.image.width},
+							
+					}
+					s.image.src = source;
+					return s;
+};
+
+function Player(location, source, spd, world){
+  this.location = location;
+  if(world == undefined) world = {x:0,y:0};
+  this.source = source;
+  this.x = c.width/2;
+  this.y = c.height/2;
+  this.worldX = function(){return this.x + world.x;}
+  this.worldY = function(){return this.y + world.y;}
+  this.spd = spd;
+  this.vy = 0;
+  this.vx = 0;
+  this.offsetX = 0;
+  this.offsetY = 0;
+  
+  //the actual amount of pixels the player moved after collision
+  this.actualVX = 0;
+  this.actualVY = 0;
+  
+  this.ax = 0;
+  this.ay = 0;
+  this.rotation = 0;
+  this.color ="#ff0000";
+  this.scaleX = 1;
+  this.scaleY = 1; 
+  
+  this.sprite = new Sprite(getPlayer(), this, this.source);
+  this.width = function(){return this.sprite.data.frames[0][0].sourceSize.w * this.scaleX};
+  this.height= function(){return this.sprite.data.frames[0][0].sourceSize.h * this.scaleY};
+  this.canJump = false;
+  this.sprite.crossOrigin="anonymous";
+  this._index = 0;
+  this.direction = 2;
+  this.index = function()
+  {
+	this._index++
+	if(this._index >= this.sprite.data.frames[this.direction].length)this._index = 0;
+	
+	return this._index;
+  }
+  this.drawSprite = function(i)
+  	{
+	var _i
+	if(i != undefined){_i = i;}
+	else{_i = this.index(this.direction)}
+	
+    location.drawImage(this.sprite.image,
+	this.worldX() - this.width()/2 - this.sprite.data.frames[this.direction][_i].frame.x*this.scaleX,
+	this.worldY() - this.height()/2 - this.sprite.data.frames[this.direction][_i].frame.y*this.scaleY, this.sprite.width(), 
+	this.sprite.height());
+  	}
+  //The players velocity fixed to pixel lengths
+  this.fixedVX = function()
+  {
+  	return Math.round(this.vx);
+  }
+  this.fixedVY = function()
+  {
+  	return Math.round(this.vy);
+  }
+  
+  //The direction the player is moving in. This returns 1 or -1
+  this.directionX = function()
+  {
+  		if(this.fixedVX()!==0)
+  		{
+  		return this.fixedVX()/Math.abs(this.fixedVX());
+  		}
+  		else
+  		{
+  		return 0;
+  		}
+  		
+  }
+  this.directionY = function()
+  {
+  		if(this.fixedVY()!==0)
+  		{
+			return this.fixedVY()/Math.abs(this.fixedVY());
+  		}
+  		else
+  		{
+			return 0;
+  		}
+  }
+ 
+  //draws the player 
+  this.draw = function()
+  {
+ 	location.fillStyle=this.color;
+  	location.save();
+    location.translate(this.worldX(), this.worldY());
+    location.rotate(this.rotation * Math.PI/180);
+ 	location.fillRect(this.width()/-2,this.height()/-2,this.width(),this.height());
+  	location.restore();
+  }
+  
+  //returns hit points and alpha of pixel
+  this.top = function()
+  {
+  	var point = {x:this.worldX(),y:this.worldY()-this.height()/2};
+  	var imgData=ctx.getImageData(point.x, point.y,1,1);
+    return {x:point.x,y:point.y, color:imgData.data};
+    
+  }
+  this.bottom = function()
+  {
+  	var point = {x:this.worldX(),y:this.worldY()+this.height()/2};
+  	var imgData=ctx.getImageData(point.x, point.y,1,1);
+     return {x:point.x,y:point.y, color:imgData.data};
+    
+  }
+  this.right = function()
+  {
+  	var point = {x:this.worldX()+this.width()/2,y:this.worldY()};
+  	var imgData=ctx.getImageData(point.x, point.y,1,1);
+    return {x:point.x,y:point.y, color:imgData.data};
+    
+  }
+  this.left = function()
+  {
+  	var point = {x:this.worldX()-this.width()/2,y:this.worldY()};
+  	var imgData=ctx.getImageData(point.x, point.y,1,1);
+    return {x:point.x,y:point.y, color:imgData.data};
+    
+  }
+  
+  this.points = function(){return[this.top(), this.bottom(), this.left(), this.right()];}
+  this.drawpoints = function(array)
+  {
+	var points;
+	if(array ==null){points=this.points()}
+	else points= array;
+  	ctx.fillStyle = "black";
+  	for(var i=0; i < points.length; i++)
+  	{
+  		ctx.fillRect(points[i].x-2, points[i].y-2, 4,4)
+  	}
+  }
+  this.hitTestObject = function(object){
+	if(this.bottom().y > object.top().y && this.top().y < object.bottom().y &&
+	   this.left().x < object.right().x && this.right().x > object.left().x) 
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+} 
+
+/*function copy()
+{
+var imgData=ctx.getImageData(10,10,50,50);
+alert(imgData.data[3]);
+//ctx.putImageData(imgData,10,70);
+}*/
+
+
+animate();
+
+function animate()
+{
+
+//calculate velocities
+ if(d)
+ {
+ 	player.vx += player.spd;
+	player.direction = 2;
+ }
+ if(a)
+ {
+ 	player.vx += -player.spd;
+	player.direction = 1;
+ }
+ if(w /*&& player.canJump*/)
+ {
+ 		player.vy += -player.spd;
+		player.direction = 3;
+		/*player.canJump = false; 
+		player.vy = -35;*/
+ }
+  if(s)
+ {
+ 		player.vy += player.spd;
+		player.direction = 0;
+ }
+  
+ 
+  player.vy *= .5;
+  player.vx *= .5;
+  //player.vy += level.gravity;
+  //draw the hit box
+  drawhit();
+  
+  //set distance to move and move the player
+  	player.actualVX = player.fixedVX();
+  	player.x += player.fixedVX();
+  
+  	while(player.right().color[3] != 0)
+  	{
+  		player.x--;
+  		player.actualVX--;
+    	player.vx = 0;
+ 	}
+ 	while(player.left().color[3] != 0)
+  	{
+  		player.x++;
+  		player.actualVX++;
+    	player.vx = 0;
+ 	}
+  
+    //set distance to move and move the player
+    player.actualVY = player.fixedVY();
+    player.y += player.fixedVY();
+  
+  	while(player.bottom().color[3] != 0)
+  	{
+	    player.canJump = true;
+  		player.vy = 0;
+  		player.y--;
+  		player.actualVY--;
+ 	}
+ 	while(player.top().color[3] != 0)
+  	{
+  		player.vy = 0;
+  		player.y++;
+  		player.actualVY++;
+    	
+ 	}
+ 	
+ 	// move the level
+ 	player.y += -player.actualVY;
+  	player.x += -player.actualVX;
+  	level.x += -player.actualVX;
+  	level.y += -player.actualVY;
+		
+	if(player.hitTestObject(brick)){brick.x = 10000;} 
+  	drawScreen();
+   
+	// move the background
+	c.style.backgroundPosition = level.x*1 + "px " + level.y*1 +"px," + (level.x-2000)*1 + "px " + (level.y+3800)*1 +"px";
+
+	// player.draw();
+ 	// player.drawpoints();
+	var timer = setTimeout(animate, 33);
+
+}
+
+/*---------Controls----------------*/
+
+var w = false;
+var a = false
+var s = false;
+var d = false;
+ 
+addEventListener("keydown", function(e){
+	if(e.keyCode == 87)w=true;
+    if(e.keyCode == 65)a=true;
+ 	if(e.keyCode == 83)s=true;
+ 	if(e.keyCode == 68)d=true;
+});
+addEventListener("keyup", function(e){
+	if(e.keyCode == 87)w=false;
+    if(e.keyCode == 65)a=false;
+ 	if(e.keyCode == 83)s=false;
+ 	if(e.keyCode == 68)d=false;
+});
+
+/*---------Controls----------------*/
+
+
+function drawhit()
+{
+	ctx.clearRect(0,0,c.width, c.height);
+	level.drawhit();
+}
+function drawScreen()
+{
+	ctx.clearRect(0,0,c.width, c.height);
+	ctx2.clearRect(0,0,c.width, c.height);
+	ctx3.clearRect(0,0,c.width, c.height);
+	level.draw();
+	//level.drawhit();
+	ctx2.save();
+		player.draw();
+		ctx2.globalCompositeOperation = "source-in";
+		if(!a && !w && !s && !d) 
+		{
+			//draw idle frame
+			player.drawSprite(3);
+		}
+		else 
+		{
+			//animate sprite
+			
+			player.drawSprite();
+			
+		}
+	ctx2.restore();
+	brick.draw();
+}
+
+</script>
+</html>

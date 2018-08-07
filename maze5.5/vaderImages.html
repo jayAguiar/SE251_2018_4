@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Untitled Document</title>
+</head>
+
+<body>
+ <canvas id="myCanvas" width="800" height="800"></canvas>
+ <p id="p"></p>
+</body>
+<script>
+var points = [];
+ function drawImage(imageObj) {
+        var canvas = document.getElementById('myCanvas');
+        var context = canvas.getContext('2d');
+        var x = 69;
+        var y = 50;
+
+        context.drawImage(imageObj, x, y);
+
+        var imageData = context.getImageData(x, y, imageObj.width, imageObj.height);
+        var data = imageData.data;
+
+        for(var i = 0; i < data.length; i += 4) {
+          // red
+         // data[i] = 255 - data[i];
+          // green
+         // data[i + 1] = 255 - data[i + 1];
+          // blue
+         // data[i + 2] = 255 - data[i + 2];
+		  //alpha
+		 if(data[i+3] != 0)
+		 {
+			 var _x = (Math.floor(i / 4) % imageObj.width);
+			 var _y = Math.floor(Math.floor(i/imageObj.width)/4);
+			points.push({x:_x, y:_y});
+		 }
+        }
+
+        // overwrite original image with an inverted color
+       	// context.putImageData(imageData, x, y);
+		 for(var i = 0; i < points.length; i++)
+		  {
+			  context.fillStyle=this.color;
+  
+    		
+ 			context.fillRect(points[i].x-20, points[i].y- 20,40,40);
+  		
+		  
+		  }
+      }
+      
+      var imageObj = new Image();
+      imageObj.onload = function() {
+		  
+		
+        drawImage(this);
+		 
+		//document.getElementById("p").innerHTML = points[0].x+", " + points[0].y;
+		
+      };
+      imageObj.src = 'items.png';
+	  </script>
+</html>
